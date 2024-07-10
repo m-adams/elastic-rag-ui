@@ -18,6 +18,7 @@ COPY ./requirements.txt .
 RUN pip3 install -r ./requirements.txt
 
 ADD ./components ./components
+ADD ./.streamlit ./.streamlit
 COPY instructions.md .
 COPY app.py . 
 
