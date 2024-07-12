@@ -1,4 +1,4 @@
-## Welcome to the ELasticsearch ReMapper!
+## Welcome to the Elasticsearch ReMapper!
 
 This is a simple App to walk through the steps of adjusting an existing mapping of an index by reindexing in to a new index with an updated mapping. It also facilitates best practice to use index aliases to refer to indexes and also allows you to reindex through a pipeline to modify the data.
 
