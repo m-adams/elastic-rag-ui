@@ -1,4 +1,4 @@
-# Project Name
+# Elasticsearch ReMapper
 
 This is a Python project that utilizes Streamlit for building interactive web applications. The project allows for easy updating of Elasticsearch mappings. 
 
