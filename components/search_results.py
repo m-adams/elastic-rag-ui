@@ -1,19 +1,26 @@
 import streamlit as st
 
-default_md_template = """
-# {title}
+session_state = st.session_state
 
-"""
+# Load default markdown template
+with open("default_md_template.md") as f:
+    default_md_template = f.read().strip()
 
-def deslay_doc(doc: dict, md_template: str = None):
 
-    with st.container():
-        for key, value in doc.items():
-            st.write(f"**{key}**: {value}")
-    st.write(doc)
 
-def search_results_widget(search_results_container,docs: list[dict]):
+def render_document(doc: dict, md_template: str = None):
+
+    if md_template:
+        source = doc["_source"]
+        try:
+            doc = md_template.format(**source)
+            st.markdown(doc)
+        except Exception as e:
+            print(e)
+            print("Error in writing doc")
+            print(source)
+
+def search_results_widget(search_results_container,docs: list[dict], md_template: str = None):
     with search_results_container:
-        st.title("Search Results")
         for doc in docs:
-            deslay_doc(doc)
+            render_document(doc, md_template)
