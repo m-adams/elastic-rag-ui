@@ -12,19 +12,6 @@ import elasticsearch
 session_state = st.session_state
 
 
-def initialise_llm():
-    # Initialise the LLM connection configuration
-    llm_type_default = os.getenv("LLM_TYPE")
-    llm_api_key_default = os.getenv("LLM_API_KEY")
-    llm_endpoint_default = os.getenv("LLM_ENDPOINT")
-
-    # Check if session state has been initialized
-    if "llm_type" not in session_state:
-        session_state["llm_type"] = llm_type_default
-    if "llm_api_key" not in session_state:
-        session_state["llm_api_key"] = llm_api_key_default
-    if "llm_endpoint" not in session_state:
-        session_state["llm_endpoint"] = llm_endpoint_default
 
 def reset_es_defaults():
 
@@ -178,6 +165,8 @@ def initialise_monitoring(force : bool = False):
         session_state["apm_url"] = apm_url_default
     if "event_dataset_logs" not in session_state or force:
         session_state["event_dataset_logs"] = event_dataset_logs_default
+    if "monitoring_connected" not in session_state or force:
+        session_state["monitoring_connected"] = False
     
     es_logging_client = check_elasticsearch_connection(prefix="monitoring_")
 

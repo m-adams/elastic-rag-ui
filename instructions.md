@@ -1,13 +1,14 @@
-## Welcome to the Elasticsearch ReMapper!
+## Welcome to the Elastic RAG UI!
 
-This is a simple App to walk through the steps of adjusting an existing mapping of an index by reindexing in to a new index with an updated mapping. It also facilitates best practice to use index aliases to refer to indexes and also allows you to reindex through a pipeline to modify the data.
+This is a simple UI designed to help prototype a Retrieval Augmented Generation (RAG) system using ElasticSearch.
 
-### Steps
-1. Enter your connection details in the sidebar. These can also be set through ENV variables or in an .env file
-2. Select the index you want to remap. You can search using a pattern
-4. Click the "Select Index" button
-5. (Optional) If you want to move an alias associated with the index select it in the dropdown
-6. (Optional) If you want to use an index pipeline to process the data, search for the pipeline, select and make sure to test the pipeline
-7. Adjust the mapping and click save
-8. Click the "Remap" button
-9. You can see progress in the "Status Updates" section
+It is designed so that most of the configuration can be done through the UI, but if you want further customisation you can jump in to the code.
+
+Head over to the sidebar to get started!
+
+Setup all your connection details in the sidebar. These can also be set through ENV variables or in an .env file.
+
+You can modify what data you are querying and what search function to use here.
+When you are happy with everything you can save the state to a file and load it later.
+
+You can also use view mode to clean up the interface.

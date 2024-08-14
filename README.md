@@ -10,9 +10,9 @@ This is a Python project that utilizes Streamlit for building interactive web ap
 
 ## Usage
 
-1. Run the application by executing `streamlit run app.py`.
-2. Access the application in your web browser at `http://localhost:8080`.
-3. Follow the instructions provided in the application to update Elasticsearch mappings.
+1. Run the application by executing `streamlit run Elastic_RAG_PoC.py`.
+2. Access the application in your web browser at `http://localhost:8080`. You can also launch in VScode  
+
 
 ## Contributing
 

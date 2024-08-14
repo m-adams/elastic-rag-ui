@@ -9,6 +9,12 @@ import dotenv
 states_directory = "./saved-states"
 session_state = st.session_state
 stste={}
+
+def force_refresh_of_state():
+        for key in session_state.keys():
+            if state_key_should_be_saved(key):
+                session_state[key] = session_state[key]
+
 # Function to save the current state
 def save_state(state_name: str, container: st.container):
     """
@@ -22,6 +28,8 @@ def save_state(state_name: str, container: st.container):
     None
     """
 
+    
+
     global states_directory, state
     print(f"Saving session state as: {state_name}")
     if state_name:
@@ -33,16 +41,28 @@ def save_state(state_name: str, container: st.container):
             print(f"Saving session state:\n{session_state}\nTo filename: {state_file}")
             state = {}
             for key in session_state.keys():
-                if key.endswith("_client") or key.endswith("_button"):
-                    # Skip these keys as they are not serializable or cause errors
-                    continue
-                else:
+                if state_key_should_be_saved(key):
                     state[key] = session_state[key]
                     #print(f"Key: {key}, Value: {session_state[key]}")
             pickle.dump(state, f)
 
         with container:
             st.success("State saved successfully!")
+
+def state_key_should_be_saved(key):
+    if key.endswith("_client"):
+        # Skip these keys as they are not serializable
+        return False
+    if key.endswith("_button"):
+        # You can't set the state of buttons
+        return False
+    if key.endswith("chat_input"):
+        # You can't set the value of the chat input
+        return False
+    if key.endswith("_table"):
+        # You can't set the value of the table
+        return False
+    return True
 
 def get_states():
     state_files = os.listdir(states_directory)

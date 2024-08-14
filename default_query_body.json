@@ -5,7 +5,7 @@
           "multi_match": {
             "query": "{query}",
             "fields": [
-              "text"
+              "title","body_content","text"
             ]
           }
         }

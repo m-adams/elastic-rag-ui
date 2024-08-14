@@ -1,11 +1,12 @@
 
 import dotenv
-from components.elasticsearch_connection import es_connection_config_widget, connection_status_widget, monitoring_connection_config_widget
-from components.state import saved_state_widget, load_state
+from components.elasticsearch_connection import es_connection_config_widget, connection_status_widget, monitoring_connection_config_widget, get_es_client
+from components.state import saved_state_widget, load_state, force_refresh_of_state
 from components.search_results import search_results_widget
 from components.elasticsearch import index_selector_widget, search
 from components.llm import llm_config_widget, llm_chat_widget
 from components.llm_functions import function_select_widget
+from components.speech import text_to_speech_config_widget
 import streamlit as st
 from code_editor import code_editor
 import json
@@ -16,6 +17,9 @@ import sys
 import elasticapm
 
 session_state = st.session_state
+force_refresh_of_state() # Streamlit starts cleaning up elements that aren't used
+
+
 
 st.set_page_config(
     page_title=session_state.get("app_name", "Elastic AI Search"),
@@ -36,17 +40,17 @@ def set_std_logger():
 def setup_logging():
     # setup logging 
     global logger
-    eslogger = session_state.get("monitoring_es_client")
-    print("Setting up logging")
-    print(eslogger)
-    print("normal es client")
-    print(session_state.get("es_client"))
+    eslogger = get_es_client(prefix="monitoring_")
+    #print(eslogger)
+
     if eslogger is None:
         print("No monitoring client, setting up standard logger")
         set_std_logger()
         return
-    logs_index_name = session_state.get("logs_index_name")
-    event_dataset_logs = session_state.get("event_dataset_logs", "ldemo-logs")
+    logs_index_name = session_state.get("logs_index_name","logs-ai-demo-dev")
+    if not logs_index_name or logs_index_name == "":
+        logs_index_name = "logs-ai-demo-dev"
+    event_dataset_logs = session_state.get("event_dataset_logs", "demo-logs")
     handler = loggeres.ElasticHandler(logging.INFO,eslogger,logs_index_name)
     handler.setFormatter(ecs_logging.StdlibFormatter())
     logger = logging.getLogger("app")
@@ -57,12 +61,12 @@ def setup_logging():
 
 
 def set_apm():
-    print("Setting up APM")
+    #print("Setting up APM")
     if session_state.get("apm_client"):
-        print("APM already set")
+        #print("APM already set")
         return session_state["apm_client"]
     if elasticapm.get_client():
-        print("APM already set")
+        #print("APM already set")
         session_state["apm_client"] = elasticapm.get_client()
         return session_state["apm_client"]
     service_name = session_state.get("apm_service_name", "elastic-ai-search")
@@ -70,11 +74,11 @@ def set_apm():
     secret_token = session_state.get("apm_secret_token")
     server_url = session_state.get("apm_url")
     try:
-        print("Setting up APM with new client")
-        print(session_state.get("apm_client"))
+        #print("Setting up APM with new client")
+       # print(session_state.get("apm_client"))
         apm = elasticapm.Client(service_name=service_name, environment=environment, secret_token=secret_token, server_url=server_url,)
-        print("APM set up")
-        print(apm)
+        #print("APM set up")
+        #print(apm)
 
         if apm:
             elasticapm.instrument()
@@ -110,7 +114,25 @@ def initialize_session_state():
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+def save_title_field():
+    title_field = st.session_state.get("title_field")
+    session_state["title_field_chosen"] = title_field
+    print(f"saving title field: {title_field}")
 
+def get_options_index(options : list, selection : str, default_selection : str = None):
+    print(f"Options: {options}")
+    print(f"Selection: {selection}")
+    try:
+        index = options.index(selection)
+        print(f"Index of {selection} is {index}")
+        return options.index(selection)
+    except Exception as e:
+        try:
+            index = options.index(default_selection)
+            return index
+        except Exception as e:
+            return 0
+        return 0    
 
 def main():
 
@@ -155,6 +177,9 @@ def main():
         #print("llm_functions:",llm_functions)
         session_state["llm_functions"] = llm_functions
 
+        speech_to_text_expander = st.expander(label="Speech to Text")
+        text_to_speech_config_widget(speech_to_text_expander)
+
         monitoring_connection_expander = st.expander(label="Monitoring Cluster")
         monitoring_connection_config_widget(monitoring_connection_expander)
         set_apm()
@@ -181,6 +206,10 @@ def main():
             index_pattern_col, num_results_col = st.columns([4,1])
             with index_pattern_col:
                 index_selector_widget(st.container())
+            #keyword_and_text_fields = session_state.get("keyword_and_text_fields", [])
+           # options_index = get_options_index(keyword_and_text_fields, session_state.get("title_field_chosen", "title"), default_selection="title")
+            #title_selection = st.selectbox(label="Select Document Title Field", options=keyword_and_text_fields, key="title_field", on_change=save_title_field, args=[], index=options_index)
+            #print(f"Title Selection: {title_selection}")
             with num_results_col:
                 num_results = st.number_input("Number of Results", key="num_results", value=session_state.get("num_results", 10))
             st.write("Define your query. Tip: Try Playground in Kibana")

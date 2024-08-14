@@ -5,9 +5,24 @@ from openai import OpenAI
 import json
 import llm_functions as llmfs
 import elasticapm
-from components.speech import speech_widget # Required to refresh for testing
+from components.speech import speech_widget, generate_and_play_speech # Required to refresh for testing
 
 session_state = st.session_state
+
+def initialise_llm():
+    # Initialise the LLM connection configuration
+    llm_type_default = os.getenv("LLM_TYPE")
+    llm_api_key_default = os.getenv("LLM_API_KEY")
+    llm_endpoint_default = os.getenv("LLM_ENDPOINT")
+
+    # Check if session state has been initialized
+    if "llm_type" not in session_state:
+        session_state["llm_type"] = llm_type_default
+    if "llm_api_key" not in session_state:
+        session_state["llm_api_key"] = llm_api_key_default
+    if "llm_endpoint" not in session_state:
+        session_state["llm_endpoint"] = llm_endpoint_default
+
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -25,7 +40,7 @@ def test_llm_connection():
                 {"role": "user", "content": "Just checking the connection"}
                 ]
             response = llm_client.chat.completions.create(model=session_state.get("azure_openai_deployment_name"),messages=messages)
-            #print(response.choices[0].message.content) 
+            #(response.choices[0].message.content) 
             session_state["llm_connected"] = True
             return True
         except Exception as e:
@@ -62,6 +77,10 @@ def llm_config_widget(container: st.container):
     llm_type_default = os.getenv("LLM_TYPE")
     azure_openai_key_default = os.getenv("AZURE_OPENAI_KEY")
     azure_openai_deployment_name_default = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")
+    openai_key_default = os.getenv("OPENAI_API_KEY")
+
+    system_prompt_default = "You are an assistant designed to help people get answers from a corpus of information. Where possible you provide concise answers citing your sources."
+
     if "llm_type" not in session_state:
         session_state["llm_type"] = llm_type_default
     azure_openai_endpoint_default = os.getenv("AZURE_OPENAI_ENDPOINT")
@@ -70,7 +89,7 @@ def llm_config_widget(container: st.container):
     # LLM Configuration
     with container:
 
-        system_prompt = st.text_area("System Prompt", key="system_prompt", value=session_state.get("system_prompt", "you are a friendly chatbot"))
+        system_prompt = st.text_area("System Prompt", key="system_prompt", value=session_state.get("system_prompt",system_prompt_default))
         corpus_description = st.text_area("Corpus Description", key="corpus_description", value=session_state.get("corpus_description", "A collection of corporate data"))
         llm_type = st.selection = st.selectbox(label="Select LLM Type",options=llm_typres,key="llm_type")
 
@@ -82,8 +101,7 @@ def llm_config_widget(container: st.container):
             connect_llm()
 
         elif llm_type == "openai":
-            st.write("OpenAI LLM Configuration")
-            st.text_input("OpenAI API Key")
+            st.text_input("OpenAI API Key",value=session_state.get("openai_api_key",openai_key_default), key="llm_openai_key")
         elif llm_type == "bedrock":
             st.write("Bedrock LLM Configuration")
             st.write("Coming Soon")
@@ -182,7 +200,7 @@ def llm_chat(container : st.container):
                 st.write(response)
 
     elasticapm.label(es_query=last_message)
-    audit_message = f'User {user_name} asked {last_message} and received {response}'
+    audit_message = f'User {user_name} asked {last_message}'
     audit_context = {'user.full_name': user_name}
     audit_context['reply'] = response
     audit_context['query'] = last_message
@@ -192,15 +210,21 @@ def llm_chat(container : st.container):
         for result in results:
             audit_context['doc_references'].append(result["_source"]["title"])
     logger = session_state.get("logger_client")
-    logger.info(audit_message,extra=audit_context)
-            
+    try:   
+        logger.info(audit_message,extra=audit_context)
+    except Exception as e:
+        print(e)
+        print("Failed to write to log")
+        print(audit_message,audit_context)
+    print("writing to log")       
     return response
 
 def reset_chat():
     st.session_state.messages = []
 
-def submit_audio(container : st.container):
-    question = session_state.get("STT_output")
+def submit_audio(container : st.container,question : str = None):
+    if question is None:
+        question = session_state.get("STT_output")
     #session_state["chat_input"] = question
     submit_chat(container, prompt=question)
     return
@@ -223,6 +247,8 @@ def submit_chat(chat_container : st.container, prompt : str = None):
         if response:
             # Add LLM response to chat history
             st.session_state.messages.append({"role": "assistant", "content": response})
+            if session_state.get("enable_speech", True):
+                generate_and_play_speech(response, chat_container)
     if apm_client:
         apm_client.end_transaction(name="llm_chat", result="success")
     return
@@ -232,11 +258,14 @@ def llm_chat_widget(container : st.container):
     llm_client = session_state.get("llm_client")
     # Chat Widget
     with container:
-        col_name, col_reset = st.columns(2)
+        col_name, col_reset, speech_col = st.columns(3)
         with col_name:
             st.text_input("What is your name?", key="user_name", value=session_state.get("user_name", "alice"))
         with col_reset:    
             st.button("Clear Chat", on_click=reset_chat)
+        with speech_col:
+            speech_dssabled = not(session_state.get("t2s_turn_on", False))
+            st.checkbox(label="Enable Speech",key="enable_speech", value=session_state.get("enable_speech", True), disabled=speech_dssabled)
         # Display chat messages from history on app rerun
         chat_container = st.container()
         with chat_container:
@@ -249,6 +278,6 @@ def llm_chat_widget(container : st.container):
             st.chat_input("How can I help?",key="chat_input",on_submit=submit_chat, args=[chat_container])
             st.write("Speak the question")
             
-            question = speech_widget(st.container(),submit_audio, args=[chat_container])
+            speech_widget(st.container(),submit_audio, args=[chat_container])
 
     return
